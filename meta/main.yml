@@ -1,0 +1,18 @@
+---
+
+galaxy_info:
+  author: ruimiguel
+  description: MariaDB Installation
+  company: MACC
+  license: MIT
+  min_ansible_version: 2.4
+  platforms:
+    - name: CentOS
+      versions:
+        - all
+  galaxy_tags:
+    - database
+    - MySQL
+    - MariaDB
+
+dependencies: []

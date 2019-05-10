@@ -1,0 +1,104 @@
+---
+
+- name: add MariaDB repository
+  template:
+    src: MariaDB.repo
+    dest: /etc/yum.repos.d/MariaDB.repo
+    mode: 0644
+  tags: mariadb
+
+- name: install MariaDB server
+  yum:
+    name: "{{ packages }}"
+  vars:
+    packages:
+      - MariaDB-server
+      - MySQL-python
+      - policycoreutils-python
+  tags: mariadb
+
+- name: get datadir
+  stat:
+    path: "{{ mariadb.server.datadir }}/mysql"
+  register: datadir
+  tags: mariadb
+
+- name: copy configuration
+  template:
+    src: server.cnf
+    dest: /etc/my.cnf.d/server.cnf
+    mode: 0644
+  tags: mariadb
+
+- name: create datadir
+  file:
+    path: "{{ mariadb.server.datadir }}"
+    state: directory
+    owner: mysql
+    group: mysql
+    mode: 0700
+  tags: mariadb
+
+- name: play nice with SELinux
+  sefcontext:
+    target: "{{ mariadb.server.datadir }}(/.*)?"
+    setype: mysqld_db_t
+    state: present
+  tags: mariadb
+
+- name: apply new SELinux file context to filesystem
+  command: restorecon -irv "{{ mariadb.server.datadir }}"
+  tags: mariadb
+
+- name: initialize database in datadir
+  command: mysql_install_db --user=mysql
+  when: not datadir.stat.exists
+  tags: mariadb
+
+- name: start MariaDB
+  service:
+    name: mariadb
+    state: started
+    enabled: yes
+  tags: mariadb
+
+- name: check if root user as a password
+  shell: mysqladmin -u root status
+  changed_when: rootpw != 0
+  failed_when: false
+  register: rootpw
+  tags: mariadb
+
+- name: set MariaDB root password
+  mysql_user:
+    name: root
+    host: localhost
+    password: "{{ mariadb.password }}"
+  when: rootpw.rc == 0
+  tags: mariadb
+
+- name: remove anonymous users
+  mysql_user:
+    name: ''
+    host_all: yes
+    login_password: "{{ mariadb.password }}"
+    login_user: root
+    state: absent
+  tags: mariadb
+
+- name: remove global host wildcard
+  mysql_user:
+    name: root
+    host: '%'
+    login_password: "{{ mariadb.password }}"
+    login_user: root
+    state: absent
+  tags: mariadb
+
+- name: remove test database
+  mysql_db:
+    name: test
+    login_password: "{{ mariadb.password }}"
+    login_user: root
+    state: absent
+  tags: mariadb
