@@ -2,8 +2,8 @@
 
 - name: add MariaDB repository
   template:
-    src: MariaDB.repo
-    dest: /etc/yum.repos.d/MariaDB.repo
+    src: mariadb.repo
+    dest: /etc/yum.repos.d/mariadb.repo
     mode: 0644
   tags: mariadb
 
@@ -19,8 +19,23 @@
 
 - name: get datadir
   stat:
-    path: "{{ mariadb.server.datadir }}/mysql"
+    path: "{{ mariadb_config.datadir }}/mysql"
   register: datadir
+  tags: mariadb
+
+- name: copy certificates
+  copy:
+    content: "{{ item.content }}"
+    dest: "/etc/ssl/{{ item.dest }}"
+    mode: 0600
+    owner: mysql
+    group: mysql
+  loop:
+    - { content: "{{ mariadb_tls.ca }}", dest: mariadb-server.ca }
+    - { content: "{{ mariadb_tls.cert }}", dest: mariadb-server.cert }
+    - { content: "{{ mariadb_tls.key }}", dest: mariadb-server.key }
+  when: mariadb_tls.enabled
+  no_log: true
   tags: mariadb
 
 - name: copy configuration
@@ -32,22 +47,22 @@
 
 - name: create datadir
   file:
-    path: "{{ mariadb.server.datadir }}"
+    path: "{{ mariadb_config.datadir }}"
     state: directory
     owner: mysql
     group: mysql
-    mode: 0700
+    mode: 0755
   tags: mariadb
 
 - name: play nice with SELinux
   sefcontext:
-    target: "{{ mariadb.server.datadir }}(/.*)?"
+    target: "{{ mariadb_config.datadir }}(/.*)?"
     setype: mysqld_db_t
     state: present
   tags: mariadb
 
 - name: apply new SELinux file context to filesystem
-  command: restorecon -irv "{{ mariadb.server.datadir }}"
+  command: restorecon -irv "{{ mariadb_config.datadir }}"
   tags: mariadb
 
 - name: initialize database in datadir
@@ -58,7 +73,7 @@
 - name: start MariaDB
   service:
     name: mariadb
-    state: started
+    state: restarted
     enabled: yes
   tags: mariadb
 
@@ -73,7 +88,7 @@
   mysql_user:
     name: root
     host: localhost
-    password: "{{ mariadb.password }}"
+    password: "{{ mariadb_password }}"
   when: rootpw.rc == 0
   tags: mariadb
 
@@ -81,7 +96,7 @@
   mysql_user:
     name: ''
     host_all: yes
-    login_password: "{{ mariadb.password }}"
+    login_password: "{{ mariadb_password }}"
     login_user: root
     state: absent
   tags: mariadb
@@ -90,7 +105,7 @@
   mysql_user:
     name: root
     host: '%'
-    login_password: "{{ mariadb.password }}"
+    login_password: "{{ mariadb_password }}"
     login_user: root
     state: absent
   tags: mariadb
@@ -98,7 +113,7 @@
 - name: remove test database
   mysql_db:
     name: test
-    login_password: "{{ mariadb.password }}"
+    login_password: "{{ mariadb_password }}"
     login_user: root
     state: absent
   tags: mariadb

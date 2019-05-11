@@ -1,8 +1,12 @@
 ---
 
-mariadb:
-  version: 10.3
-  password: secret
-  server:
-    bind-address: 127.0.0.1
-    datadir: /var/lib/mysql
+mariadb_password: secret
+mariadb_version: 10.3
+mariadb_config:
+  bind-address: 127.0.0.1
+  datadir: /var/lib/teste
+mariadb_tls:
+  ca: ''
+  cert: ''
+  enabled: no
+  key: ''

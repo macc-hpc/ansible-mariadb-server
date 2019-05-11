@@ -13,11 +13,15 @@
 # If you use the same .cnf file for MySQL and MariaDB,
 # you can put MariaDB-only options here
 [mariadb]
-{% for key, value in mariadb.server.items() %}
+{% for key, value in mariadb_config.items() %}
 {{ key }}={{ value }}
 {% endfor %}
-
+{% if mariadb_tls.enabled %}
+ssl-ca = /etc/ssl/mariadb-server.ca
+ssl-cert = /etc/ssl/mariadb-server.cert
+ssl-key = /etc/ssl/mariadb-server.key
+{% endif %}
 # This group is only read by MariaDB-10.3 servers.
 # If you use the same .cnf file for MariaDB of different versions,
 # use this group for options that older servers don't understand
-[mariadb-{{ mariadb.version }}]
+[mariadb-{{ mariadb_version }}]
