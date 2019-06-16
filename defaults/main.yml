@@ -5,6 +5,11 @@ mariadb_version: 10.3
 mariadb_config:
   bind-address: 127.0.0.1
   datadir: /var/lib/teste
+  wait_timeout: 28800
+  innodb_buffer_pool_size: 8G
+  innodb_log_file_size: 2G
+  innodb_lock_wait_timeout: 900
+  max_allowed_packet: 2G
 mariadb_tls:
   ca: ''
   cert: ''
